@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weekly Workout Tracker</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --text:#16181d; --sub:#6b7280; --line:#e5e7eb;
+  --accent:#e0546b; --accent-soft:#fde8ec; --chip:#f0f1f4; --shadow:0 1px 3px rgba(0,0,0,.06);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111318; --card:#1b1e25; --text:#eceef1; --sub:#9aa1ad; --line:#2b2f38;
+    --accent:#f0728a; --accent-soft:#2c1a20; --chip:#242830; --shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111318; --card:#1b1e25; --text:#eceef1; --sub:#9aa1ad; --line:#2b2f38;
+  --accent:#f0728a; --accent-soft:#2c1a20; --chip:#242830; --shadow:0 1px 3px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+body{
+  height:100%; margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:560px; margin:0 auto; padding:14px 14px 40px;}
+header{padding:calc(10px + env(safe-area-inset-top,0px)) 14px 8px; position:sticky; top:0; background:var(--bg); z-index:5;}
+h1{font-size:1.15rem; margin:0 0 2px; letter-spacing:-.01em;}
+.notebar{font-size:.75rem; color:var(--sub); line-height:1.4; margin-bottom:10px;}
+.tabs{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex:0 0 auto; padding:7px 13px; border-radius:20px; background:var(--chip); color:var(--sub); font-size:.82rem; font-weight:600; border:none; white-space:nowrap;}
+.tab.active{background:var(--accent); color:#fff;}
+.daytitle{padding:14px 2px 4px;}
+.daytitle h2{margin:0; font-size:1.3rem;}
+.daytitle .sub{color:var(--accent); font-weight:600; font-size:.85rem; margin-top:2px;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; margin:10px 0; box-shadow:var(--shadow); overflow:hidden;}
+.card > summary, .card .sect-head{list-style:none; cursor:pointer; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:.9rem;}
+.card > summary::-webkit-details-marker{display:none;}
+.sect-note{font-weight:400; color:var(--sub); font-size:.72rem; margin-top:2px;}
+.chev{transition:transform .15s; color:var(--sub); font-size:.8rem;}
+details[open] > summary .chev{transform:rotate(90deg);}
+.itemlist{padding:0 14px 12px;}
+.warmitem{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px dashed var(--line); font-size:.88rem;}
+.warmitem:last-child{border-bottom:none;}
+.warmitem input[type=checkbox]{width:18px; height:18px; accent-color:var(--accent); flex:0 0 auto;}
+.warmitem label{flex:1;}
+.exblock{padding:12px 14px; border-top:1px solid var(--line);}
+.exblock:first-of-type{border-top:none;}
+.exname{font-weight:700; font-size:.9rem; margin-bottom:8px;}
+.setrow{display:grid; grid-template-columns:44px 1fr 1fr; gap:8px; align-items:center; margin-bottom:6px;}
+.setrow .slabel{font-size:.75rem; color:var(--sub); font-weight:600;}
+.setrow input{width:100%; padding:8px 9px; border-radius:9px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:.88rem;}
+.setrow input::placeholder{color:var(--sub); opacity:.6;}
+.targetchip{display:inline-block; font-size:.68rem; color:var(--sub); background:var(--chip); padding:2px 7px; border-radius:8px; margin-left:6px; font-weight:600;}
+.progress{position:sticky; bottom:0; padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px)); background:linear-gradient(to top, var(--bg) 70%, transparent); font-size:.75rem; color:var(--sub); text-align:center;}
+.resetbtn{background:none; border:1px solid var(--line); color:var(--sub); font-size:.72rem; padding:5px 10px; border-radius:20px; margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>💪 Weekly Workout Tracker</h1>
+  <div class="notebar">Working sets: 80% effort or 8 reps unless noted · 60s rest between sets. Weight/reps you enter are saved on this device.</div>
+  <div class="tabs" id="tabs"></div>
+</header>
+<div class="daytitle" id="daytitle"></div>
+<div id="daycontent"></div>
+<div class="progress" id="progress"></div>
+</div>
+
+<script>
+const DAYS = [
+ { key:'mon', name:'Monday', sub:'Thrust The Process',
+   warmup:{note:'30 sec each, both legs', items:['90/90 – both legs (30s)','Hip circles','Donkey kick to abduction','Clam shell','Glute bridge – one leg straight out','Glute bridge (normal)']},
+   working:{note:'80% effort / 8 reps · 60s rest', ex:[
+     {n:'Barbell Hip Thrust', s:3},
+     {n:'Barbell Hip Thrust (100% intensity, 30s)', s:1},
+     {n:'Bench Step Ups (each leg) – Dumbbell', s:3},
+     {n:'Superset: Lateral Squat (each leg)', s:3},
+     {n:'Superset: Cable Glute Kickback (each leg)', s:3},
+   ]},
+   cooldown:{note:'30 sec each', items:['Half kneeling quad stretch (each leg)','Active hamstring stretch (each leg)','Rocking downward butterfly']}
+ },
+ { key:'tue', name:'Tuesday', sub:'Upper Dominance',
+   warmup:{note:'30 sec each · rest 30–45s', items:['Arm circles forward','Arm circles backward','Plank to pike (continuous)','Forearm side plank (each side)','Plank + toe tap, alternating legs (50s)']},
+   working:{note:'80% effort / 8 reps · 60s rest', ex:[
+     {n:'Bench Press – Dumbbell', s:3},
+     {n:'Knee Supported Bent Over Row', s:3},
+     {n:'Skull Crusher', s:2},
+     {n:'Hammer Curl', s:2},
+     {n:'Shoulder Raise (45s)', s:3},
+     {n:'Core: Bicycle Crunch (30s)', s:2},
+     {n:'Core: Heel Tap (lying)', s:2},
+     {n:'Core: Spiderman Plank Alternating (30s)', s:2},
+   ]},
+   cooldown:{note:'20 sec each', items:['Overhead tricep stretch (both arms)','Neck stretch, left & right','Forward shoulder roll','Backward shoulder roll']}
+ },
+ { key:'wed', name:'Wednesday', sub:'Gluteus Supreme',
+   warmup:{note:'20 sec each', items:['Hip circles forward (both legs)','Hip circles backward (both legs)','Cross body leg swing (both legs)']},
+   working:{note:'Reps fixed — check the target for each set', ex:[
+     {n:'Barbell Hip Thrust – pause at top', s:4, r:[6,6,6,6]},
+     {n:'Barbell Hip Thrust', s:4, r:[6,6,6,6]},
+     {n:'Romanian Deadlift', s:3, r:[8,6,6]},
+     {n:'Dumbbell Sumo Squat', s:3, r:[12,12,12]},
+     {n:'Dumbbell Seated Hip Abduction', s:3, r:[15,15,15]},
+   ]},
+   cooldown:{note:'30 sec', items:['Hurdle stretch','Hurdle stretch (each leg)','Lying glute stretch (both legs)']}
+ },
+ { key:'thu', name:'Thursday', sub:'Up Up and More Up',
+   warmup:{note:'30 sec each · 30s rest', items:['Ab bike hold w/ leg lower (each leg) ×2','Side crunch (each side)']},
+   working:{note:'60s rest between sets', ex:[
+     {n:'Close Pulldown, light (pause & hold)', s:4, r:[10,8,10,8]},
+     {n:'Cable Single Arm Row (both arms)', s:3},
+     {n:'Dumbbell Overhead Press', s:3, r:[15,15,15]},
+     {n:'Lateral Raise', s:3, r:[10,8,8]},
+     {n:'Reverse Fly', s:3, r:[15,15,15]},
+     {n:'Low Rear Delt Fly', s:3, r:[12,12,12]},
+   ]},
+   cooldown:{note:'30 sec each', items:['Arm circles forward','Arm circles backward','Arm across stretch (both arms)','Bear hug roll']}
+ },
+ { key:'fri', name:'Friday', sub:'Rock Bottom',
+   warmup:{note:'30 sec each, each leg', items:['Hip circles','Donkey kick to abduction','Clam shell','Glute bridge – one leg straight out']},
+   working:{note:'', ex:[
+     {n:'Deadlift — 90s rest', s:4, r:[10,8,8,6]},
+     {n:'Dumbbell Goblet Squat', s:3, r:[10,10,10]},
+     {n:'Curtsy Lunge, alternating legs', s:3, r:[12,12,12]},
+     {n:'Back Extension (machine)', s:2, r:[15,15]},
+   ]},
+   cooldown:{note:'Stairs · 60s rest', items:['Round 1 — 45 sec','Round 2 — 45 sec','Round 3 — 30 sec (100%)']}
+ },
+ { key:'sat', name:'Saturday', sub:'Bonus: Jack of All Trades, Master of All',
+   warmup:{note:'30 sec each, both legs', items:['Hip circles','Donkey kick to abduction','Forearm side plank (each side)','Plank + toe tap, alternating legs (50s)']},
+   working:{note:'60s rest between sets', ex:[
+     {n:'Kettlebell Goblet Squat – wide stance', s:3, weightOnly:true},
+     {n:'Kettlebell Swing', s:3, weightOnly:true},
+     {n:'Dumbbell Arnold Press', s:3, r:[12,12,12]},
+     {n:'Dumbbell Hammer Curl', s:3, r:[12,12,12]},
+     {n:'Dumbbell Squat Press', s:3, r:[12,12,12]},
+     {n:'Dumbbell Bent Over Row, alternating arms', s:3, r:[12,12,12]},
+   ]},
+   cooldown:{note:'', items:['3+ level incline walk']}
+ },
+];
+
+let active = 0;
+const KEY_PREFIX = 'workout_v1_';
+
+function loadStore(){
+  try{
+    const raw = localStorage.getItem(KEY_PREFIX+'data');
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveStore(store){
+  try{ localStorage.setItem(KEY_PREFIX+'data', JSON.stringify(store)); }catch(e){}
+}
+let store = loadStore();
+
+function fieldKey(dayKey, kind, idx, sub){
+  return `${dayKey}:${kind}:${idx}:${sub}`;
+}
+
+function renderTabs(){
+  const el = document.getElementById('tabs');
+  el.innerHTML = '';
+  DAYS.forEach((d,i)=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (i===active?' active':'');
+    b.textContent = d.name.slice(0,3);
+    b.onclick = ()=>{ active=i; render(); };
+    el.appendChild(b);
+  });
+}
+
+function warmCooldownBlock(id, title, block, dayKey, kind){
+  const openAttr = kind==='warmup' ? 'open' : '';
+  let rows = block.items.map((item,idx)=>{
+    const k = fieldKey(dayKey, kind, idx, 'done');
+    const checked = store[k] ? 'checked' : '';
+    return `<div class="warmitem">
+      <input type="checkbox" data-k="${k}" ${checked}>
+      <label>${item}</label>
+    </div>`;
+  }).join('');
+  return `<details class="card" ${openAttr}>
+    <summary><span>${title}<div class="sect-note">${block.note||''}</div></span><span class="chev">▸</span></summary>
+    <div class="itemlist">${rows}</div>
+  </details>`;
+}
+
+function workingBlock(block, dayKey){
+  let exHtml = block.ex.map((ex, exi)=>{
+    let sets = '';
+    for(let s=0; s<ex.s; s++){
+      const wKey = fieldKey(dayKey, 'w', exi, s);
+      const rKey = fieldKey(dayKey, 'r', exi, s);
+      const wVal = store[wKey] || '';
+      const rVal = store[rKey] || '';
+      const targetReps = ex.r ? ex.r[s] : null;
+      const rPlaceholder = ex.weightOnly ? '' : (targetReps ? `target ${targetReps}` : 'reps');
+      sets += `<div class="setrow">
+        <div class="slabel">Set ${s+1}</div>
+        <input type="text" inputmode="decimal" placeholder="weight" data-k="${wKey}" value="${wVal}">
+        ${ex.weightOnly ? '<div></div>' : `<input type="text" inputmode="numeric" placeholder="${rPlaceholder}" data-k="${rKey}" value="${rVal}">`}
+      </div>`;
+    }
+    return `<div class="exblock"><div class="exname">${ex.n}</div>${sets}</div>`;
+  }).join('');
+  return `<details class="card" open>
+    <summary><span>Working Set<div class="sect-note">${block.note||''}</div></span><span class="chev">▸</span></summary>
+    <div>${exHtml}</div>
+  </details>`;
+}
+
+function computeProgress(day){
+  let total=0, done=0;
+  day.warmup.items.forEach((_,idx)=>{ total++; if(store[fieldKey(day.key,'warmup',idx,'done')]) done++; });
+  day.cooldown.items.forEach((_,idx)=>{ total++; if(store[fieldKey(day.key,'cooldown',idx,'done')]) done++; });
+  day.working.ex.forEach((ex,exi)=>{
+    for(let s=0;s<ex.s;s++){
+      total++;
+      if(store[fieldKey(day.key,'w',exi,s)]) done++;
+    }
+  });
+  return {done, total};
+}
+
+function render(){
+  renderTabs();
+  const day = DAYS[active];
+  document.getElementById('daytitle').innerHTML = `<h2>${day.name}</h2><div class="sub">${day.sub}</div>`;
+  const html = [
+    warmCooldownBlock('warm','🔥 Warm-up', day.warmup, day.key, 'warmup'),
+    workingBlock(day.working, day.key),
+    warmCooldownBlock('cool','❄️ Cooldown', day.cooldown, day.key, 'cooldown'),
+  ].join('');
+  document.getElementById('daycontent').innerHTML = html;
+
+  const p = computeProgress(day);
+  document.getElementById('progress').innerHTML = `${p.done}/${p.total} logged for ${day.name} &nbsp;·&nbsp; <button class="resetbtn" id="resetBtn">Reset day</button>`;
+
+  document.querySelectorAll('input[type=checkbox][data-k]').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const k = e.target.getAttribute('data-k');
+      if(e.target.checked) store[k]=true; else delete store[k];
+      saveStore(store);
+      document.getElementById('progress').firstChild.textContent = `${computeProgress(day).done}/${computeProgress(day).total} logged for ${day.name} `;
+    });
+  });
+  document.querySelectorAll('input[type=text][data-k]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const k = e.target.getAttribute('data-k');
+      if(e.target.value) store[k]=e.target.value; else delete store[k];
+      saveStore(store);
+    });
+  });
+  const resetBtn = document.getElementById('resetBtn');
+  if(resetBtn){
+    resetBtn.addEventListener('click', ()=>{
+      Object.keys(store).forEach(k=>{ if(k.startsWith(day.key+':')) delete store[k]; });
+      saveStore(store);
+      render();
+    });
+  }
+}
+
+render();
+</script>
+</body>
+</html>
